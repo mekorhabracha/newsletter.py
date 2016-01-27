@@ -3,6 +3,7 @@ WEEKS_OFFSET = 0
 from datetime import date, time, datetime, timedelta
 from urllib.request import urlopen
 import json
+import holidays
 
 def hcAPICall(date):
     return(
@@ -90,7 +91,7 @@ def daylightSavingsTime(day, noon, oudata):
   else:
     return ''
 
-def holidays(day, hcdata):
+def HCholidays(day, hcdata):
   return  [item['title'] 
             for item 
             in hcdata 
@@ -107,7 +108,7 @@ def hasHallel(holidays):
 def hanukaCandles(day, hcdata):
   candles = [item
               for item
-              in holidays(day, hcdata)
+              in HCholidays(day, hcdata)
               if 'Chanukah' in item
               and 'Candle' in item]
   if len(candles) > 0:
@@ -135,8 +136,12 @@ def shacharitTime(day, hcdata, oudata):
   
   shacharit = datetime.combine(day, shacharit)
   
-  if hasHallel(holidays(day, hcdata)) and day.isoweekday()<6:
+  if hasHallel(HCholidays(day, hcdata)) and day.isoweekday()<6:
     shacharit = shacharit + timedelta(minutes = -15)
+    
+  if day in holidays.US():   #Secular holiday
+      shacharit = time(9)
+      
   # TODO Add other modifiers of shacharit
   return shacharit
 
@@ -203,8 +208,8 @@ for d in range(8):
     
     #Title of the day in the agenda section
     newsletter += '\n####<br />' + day.strftime('%A, %B %-d')
-    if len(holidays(day, hcdata)) > 0:
-      newsletter += ' --- ' + ', '.join(holidays(day,hcdata))
+    if len(HCholidays(day, hcdata)) > 0:
+      newsletter += ' --- ' + ', '.join(HCholidays(day,hcdata))
     newsletter += '\n\n'
     
     #Calculate times for that day, as datetime objects
@@ -224,11 +229,11 @@ for d in range(8):
     shacharit = shacharitTime(day, hcdata, oudata)
     
     #On weekdays (Mo-Fr) add the morning seder at 6am
-    if day.isoweekday()<6:
+    if day.isoweekday()<6 and not day in holidays.US():
         newsletter += '6:00am --- Morning Learning Seder\n'
         
     newsletter += ftime(shacharit) + ' --- Shacharit'  
-    # if hasHallel(holidays(day, hcdata)):
+    # if hasHallel(HCholidays(day, hcdata)):
     #   newsletter += ' (including Hallel)'
     newsletter += '\n'
 
@@ -251,7 +256,7 @@ for d in range(8):
       newsletter += ftime(mincha) + ' --- Mincha, Kabbalat Shabbat and Ma\'ariv\n'
         
     if day.isoweekday()==6:
-        newsletter += '10:45am --- Tot Shabbat\n'
+        newsletter += '10:40am --- Tot Shabbat / Cookie Minyan\n'
         newsletter += '11:45am --- Kiddush, [still available to be sponsored](mailto:mekorkiddush@gmail.com)\n'
         
         sunset  = truncmin(sunset + timedelta(minutes = 1), 1)
@@ -265,7 +270,7 @@ for d in range(8):
         maariv  = roundmin(sunset + timedelta(minutes = 32), 5)
         
         newsletter += ftime(mincha)  + ' --- Mincha\n'
-        newsletter += ftime(seuda)   + ' --- Third meal, [still available to be sponsored](mailto:mekorkiddush@gmail.com)\n'
+        newsletter += ftime(seuda)   + ' --- Third meal\n'
         newsletter += ftime(maariv)  + ' --- Ma\'ariv\n'
         if hanukaCandles(day, hcdata) != '':
           newsletter += ftime(havdala) + ' --- Havdala / Shabbat ends / Earliest menora lighting (' + hanukaCandles(day, hcdata) + ')\n'
